@@ -1,1144 +1,150 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🍱 호국 & 영수 도시락 급식표</title>
-    
-    <!-- Google Fonts: Jua (귀여운 타이틀용) & Noto Sans KR (깔끔한 본문용) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- html2canvas (식단표 이미지 저장용) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    
-    <!-- Canvas Confetti (메뉴 뽑기 축하 효과용) -->
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        'jua': ['"Jua"', 'sans-serif'],
-                        'sans': ['"Noto Sans KR"', 'sans-serif'],
-                    },
-                    colors: {
-                        cream: '#FDFBF7',
-                        softYellow: '#FFF5D6',
-                        warmYellow: '#FFE082',
-                        softMint: '#E3F6F0',
-                        warmMint: '#80CBC4',
-                        softPeach: '#FFE8E0',
-                        warmPeach: '#FFAB91',
-                        softCoral: '#FFE4E6',
-                        softLavender: '#F3E8FF',
-                        softBlue: '#E0F2FE',
-                        choco: '#4A3B32',
-                        chocoLight: '#7D6B5D',
-                    },
-                    boxShadow: {
-                        'diary': '0 4px 14px 0 rgba(74, 59, 50, 0.06)',
-                        'diary-hover': '0 8px 20px 0 rgba(74, 59, 50, 0.1)',
-                    }
-                }
-            }
-        }
-    </script>
-
-    <style>
-        body {
-            background-color: #FDFBF7;
-            background-image: radial-gradient(#E8E0D5 1px, transparent 1px);
-            background-size: 20px 20px;
-            color: #4A3B32;
-            font-family: 'Noto Sans KR', sans-serif;
-            overflow-x: hidden;
-        }
-
-        /* 마스킹 테이프 효과 */
-        .masking-tape {
-            position: absolute;
-            top: -10px;
-            left: 50%;
-            transform: translateX(-50%) rotate(-2deg);
-            width: 80px;
-            height: 22px;
-            background-color: rgba(255, 224, 130, 0.75);
-            border-left: 2px dashed rgba(255, 255, 255, 0.6);
-            border-right: 2px dashed rgba(255, 255, 255, 0.6);
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-            z-index: 10;
-        }
-
-        .masking-tape.mint {
-            background-color: rgba(167, 243, 208, 0.75);
-            transform: translateX(-50%) rotate(1.5deg);
-        }
-
-        .masking-tape.peach {
-            background-color: rgba(254, 202, 202, 0.75);
-            transform: translateX(-50%) rotate(-1.5deg);
-        }
-
-        .masking-tape.blue {
-            background-color: rgba(186, 230, 253, 0.75);
-            transform: translateX(-50%) rotate(2deg);
-        }
-
-        /* 스크롤바 커스텀 */
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #FDFBF7;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #E2D6C5;
-            border-radius: 10px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #C8B8A3;
-        }
-
-        /* 체크박스 취소선 애니메이션 */
-        .menu-text {
-            transition: all 0.2s ease;
-        }
-        .menu-done .menu-text {
-            text-decoration: line-through;
-            color: #A89B91;
-        }
-
-        /* 룰렛 회전 애니메이션 */
-        @keyframes bounce-slight {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-4px); }
-        }
-        .animate-bounce-slight {
-            animation: bounce-slight 2s infinite;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>호국 & 영수 도시락 급식표 🍱</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍱</text></svg>" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Jua&family=Pretendard:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+  <style>
+    :root {
+      --bg-paper: #FDFBF7;
+      --dot-color: #E8E0D5;
+      --card-border: #EFE6D8;
+      --text-main: #4A3B32;
+      --text-sub: #8A796E;
+    }
+    body {
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-paper);
+      background-image: radial-gradient(var(--dot-color) 1.2px, transparent 1.2px);
+      background-size: 20px 20px;
+      color: var(--text-main);
+    }
+    .font-title {
+      font-family: 'Jua', sans-serif;
+    }
+    .font-hand {
+      font-family: 'Gaegu', cursive;
+    }
+    .soft-shadow {
+      box-shadow: 0 6px 20px -4px rgba(120, 95, 75, 0.08), 0 2px 6px -1px rgba(120, 95, 75, 0.04);
+    }
+    .day-card {
+      transition: transform 0.18s ease, box-shadow 0.18s ease;
+    }
+    .day-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 24px -6px rgba(120, 95, 75, 0.13);
+    }
+    .today-ring {
+      border: 2.5px solid #FF8A65 !important;
+      background: linear-gradient(180deg, #FFF9F5 0%, #FFFFFF 100%) !important;
+    }
+    .menu-done {
+      text-decoration: line-through;
+      opacity: 0.55;
+    }
+    @keyframes popIn {
+      0% { transform: scale(0.92); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .animate-pop {
+      animation: popIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+  </style>
 </head>
 <body class="min-h-screen pb-16">
 
-    <!-- 상단 알림 토스트 메시지 -->
-    <div id="toast-container" class="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 flex flex-col gap-2 pointer-events-none w-11/12 max-w-md"></div>
-
-    <!-- 메인 컨테이너 -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8">
+  <!-- 상단 컨테이너 -->
+  <div id="capture-area" class="max-w-7xl mx-auto px-4 sm:px-6 pt-6 sm:pt-8">
+    
+    <!-- 헤더 보드 -->
+    <header class="bg-white/95 backdrop-blur rounded-3xl border border-[#EFE6D8] soft-shadow p-5 sm:p-7 mb-6">
+      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         
-        <!-- 헤더 영역 -->
-        <header class="bg-white/90 backdrop-blur-sm rounded-3xl p-5 sm:p-7 shadow-diary border-2 border-[#F2EAE0] mb-6 relative">
-            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                
-                <!-- 타이틀 & 부제목 -->
-                <div class="flex items-start sm:items-center gap-3">
-                    <div class="text-4xl sm:text-5xl animate-bounce-slight select-none">🍱</div>
-                    <div>
-                        <div class="flex items-center gap-2 flex-wrap">
-                            <h1 id="board-title" contenteditable="true" spellcheck="false" 
-                                class="font-jua text-2xl sm:text-3xl text-choco tracking-wide outline-none focus:bg-softYellow/60 rounded-lg px-1 -mx-1 transition-colors cursor-text"
-                                title="클릭해서 제목을 수정할 수 있어요!">
-                                호국 & 영수 도시락 급식표 🍱
-                            </h1>
-                            <span class="text-xs bg-softMint text-teal-800 font-semibold px-2.5 py-1 rounded-full border border-teal-200/70">
-                                ✏️ 제목 클릭 수정 가능
-                            </span>
-                        </div>
-                        <p class="text-sm text-chocoLight mt-1 flex items-center gap-2 flex-wrap">
-                            <span>호국 & 영수가 함께 정하는 알콩달콩 점심 도시락 메뉴판 🥗</span>
-                            <span id="sync-status" class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
-                                <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span> 연결 준비중...
-                            </span>
-                        </p>
-                    </div>
-                </div>
-
-                <!-- 우측 액션 버튼 그룹 -->
-                <div class="flex flex-wrap items-center gap-2 sm:gap-2.5">
-                    <!-- 방 코드(공유룸) 버튼 -->
-                    <button onclick="openRoomModal()" class="flex items-center gap-1.5 bg-softLavender hover:bg-purple-200/80 text-purple-900 font-semibold text-xs sm:text-sm px-3.5 py-2.5 rounded-2xl border border-purple-200 transition-all active:scale-95 shadow-sm">
-                        <span>🔑 급식방 코드:</span>
-                        <span id="current-room-badge" class="font-bold underline decoration-purple-400">hoguk-yeongsu</span>
-                    </button>
-
-                    <!-- 랜덤 메뉴 뽑기 버튼 -->
-                    <button onclick="openRouletteModal()" class="flex items-center gap-1.5 bg-softYellow hover:bg-amber-200/80 text-amber-900 font-semibold text-xs sm:text-sm px-3.5 py-2.5 rounded-2xl border border-amber-300 transition-all active:scale-95 shadow-sm">
-                        <span>🎲 오늘 뭐 싸지?</span>
-                    </button>
-
-                    <!-- 카톡 텍스트 복사 버튼 -->
-                    <button onclick="copyMenuToClipboard()" class="flex items-center gap-1.5 bg-[#FEE500] hover:bg-[#FDD835] text-[#3C1E1E] font-bold text-xs sm:text-sm px-3.5 py-2.5 rounded-2xl border border-amber-300 transition-all active:scale-95 shadow-sm">
-                        <span>💬 카톡 공유 복사</span>
-                    </button>
-
-                    <!-- 이미지 저장 버튼 -->
-                    <button onclick="saveAsImage()" class="flex items-center gap-1.5 bg-softMint hover:bg-teal-200/70 text-teal-900 font-semibold text-xs sm:text-sm px-3.5 py-2.5 rounded-2xl border border-teal-200 transition-all active:scale-95 shadow-sm">
-                        <span>📸 이미지 저장</span>
-                    </button>
-                </div>
+        <!-- 왼쪽 타이틀 & 상태 -->
+        <div class="flex items-start sm:items-center gap-3.5">
+          <div class="text-4xl sm:text-5xl select-none">🍱</div>
+          <div>
+            <div class="flex flex-wrap items-center gap-2">
+              <h1 id="board-title" contenteditable="true" spellcheck="false"
+                class="font-title text-2xl sm:text-3xl text-[#4A3B32] outline-none focus:bg-[#FFF5EB] px-1.5 -mx-1.5 rounded-lg transition">
+                호국 & 영수 도시락 급식표
+              </h1>
+              <span class="text-xs bg-[#E8F6EF] text-[#2B7A56] font-semibold px-2.5 py-1 rounded-full">
+                ✏️ 제목 클릭 수정 가능
+              </span>
             </div>
-
-            <!-- 주차 네비게이션 & 빠른 메뉴 칩 바 -->
-            <div class="mt-6 pt-5 border-t border-dashed border-[#E8DFD5] flex flex-col md:flex-row md:items-center justify-between gap-4">
-                
-                <!-- 주차 이동 컨트롤 -->
-                <div class="flex items-center justify-between sm:justify-start gap-2 sm:gap-3 bg-cream p-1.5 rounded-2xl border border-[#EBE2D5]">
-                    <button onclick="changeWeek(-1)" class="px-3 py-1.5 rounded-xl bg-white hover:bg-softYellow text-choco font-semibold text-xs sm:text-sm shadow-sm border border-[#EFE6DA] transition-all active:scale-95">
-                        &lt; 지난주
-                    </button>
-                    
-                    <div class="flex items-center gap-2 px-2">
-                        <span id="week-title" class="font-jua text-lg sm:text-xl text-choco tracking-wide">
-                            2026년 11월 4주차 (11/23 ~ 11/29)
-                        </span>
-                        <button onclick="goToTodayWeek()" id="btn-today-week" class="hidden text-[11px] bg-warmPeach text-white font-bold px-2 py-0.5 rounded-full hover:bg-orange-400 transition-colors">
-                            오늘로
-                        </button>
-                    </div>
-
-                    <button onclick="changeWeek(1)" class="px-3 py-1.5 rounded-xl bg-white hover:bg-softYellow text-choco font-semibold text-xs sm:text-sm shadow-sm border border-[#EFE6DA] transition-all active:scale-95">
-                        다음주 &gt;
-                    </button>
-                </div>
-
-                <!-- 빠른 추천 메뉴 칩 (클릭해서 원하는 요일에 쏙!) -->
-                <div class="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 no-scrollbar">
-                    <span class="text-xs font-bold text-chocoLight whitespace-nowrap mr-1">✨ 인기반찬 쏙:</span>
-                    <div id="quick-chips" class="flex items-center gap-1.5">
-                        <!-- JS로 렌더링 -->
-                    </div>
-                </div>
+            <div class="flex flex-wrap items-center gap-2 mt-1.5">
+              <p class="text-sm text-[#8A796E]">호국 & 영수가 함께 정하는 알콩달콩 점심 도시락 메뉴판 🥗</p>
+              <span id="sync-badge" class="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                연결 준비중...
+              </span>
             </div>
-        </header>
-
-        <!-- 캡처 대상 영역 (주간 식단표 그리드: 데스크톱 월~금 5열 + 토~일 2열 와이드) -->
-        <div id="capture-area" class="p-2 sm:p-3 rounded-3xl bg-cream/60">
-            <!-- 평일 (월~금) 5열 그리드 -->
-            <main id="weekday-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                <!-- JS로 월~금 5일 카드 동적 생성 -->
-            </main>
-
-            <!-- 주말 (토~일) 2열 와이드 그리드 -->
-            <section id="weekend-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-                <!-- JS로 토~일 2일 카드 동적 생성 -->
-            </section>
+          </div>
         </div>
 
-        <!-- 하단 도움말 및 초기화 바 -->
-        <footer class="mt-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-chocoLight bg-white/70 px-5 py-3.5 rounded-2xl border border-[#EFE6DA]">
-            <div class="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
-                <span>💡 <b>사용 팁:</b> 상단 <b>[급식방 코드]</b>를 호국 & 영수 두 분이 똑같이 맞추면 실시간으로 메뉴가 동기화돼요!</span>
-                <span class="hidden sm:inline">|</span>
-                <span>담당자 뱃지를 누르면 <span class="text-choco font-medium">호국 → 영수 → 같이 → 외식·휴무</span> 순으로 바뀌어요.</span>
-            </div>
-            <div class="flex items-center gap-2">
-                <button onclick="openResetModal()" class="text-rose-500 hover:text-rose-700 hover:bg-rose-50 px-2.5 py-1 rounded-lg font-medium transition-colors">
-                    🔄 이번 주 예시 메뉴로 초기화
-                </button>
-            </div>
-        </footer>
-    </div>
+        <!-- 오른쪽 액션 버튼들 -->
+        <div class="flex flex-wrap items-center gap-2">
+          <button id="btn-room" onclick="changeRoomCode()"
+            class="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold px-3.5 py-2 rounded-2xl bg-[#F3E8FF] hover:bg-[#E9D5FF] text-[#6B21A8] border border-[#E9D5FF] transition">
+            🔑 급식방 코드: <span id="room-label" class="underline font-bold">hoguk-yeongsu</span>
+          </button>
 
-    <!-- ================= 모달 영역 ================= -->
+          <button onclick="openRouletteModal()"
+            class="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold px-3.5 py-2 rounded-2xl bg-[#FEF3C7] hover:bg-[#FDE68A] text-[#92400E] border border-[#FDE68A] transition">
+            🎲 오늘 뭐 싸지?
+          </button>
 
-    <!-- 1. 급식방 코드 설정 모달 (호국 & 영수 실시간 동기화용) -->
-    <div id="room-modal" class="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
-        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border-2 border-[#F2EAE0] transform transition-all">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="font-jua text-2xl text-choco flex items-center gap-2">
-                    <span>🔑</span> 호국 & 영수 전용 급식방 코드
-                </h3>
-                <button onclick="closeModal('room-modal')" class="text-chocoLight hover:text-choco text-xl font-bold w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center">✕</button>
-            </div>
-            <p class="text-sm text-chocoLight leading-relaxed mb-4">
-                두 분이 <b>똑같은 방 코드(비밀번호)</b>를 입력하면, 각자 휴대폰이나 PC에서 수정한 도시락 메뉴가 실시간으로 함께 보입니다!
-            </p>
-            <div class="bg-softLavender/50 p-4 rounded-2xl border border-purple-200 mb-4">
-                <label class="block text-xs font-bold text-purple-900 mb-1.5">우리만의 방 코드 입력 (한글/영문/숫자 자유)</label>
-                <div class="flex gap-2">
-                    <input type="text" id="room-code-input" placeholder="예: hoguk-yeongsu" 
-                        class="flex-1 bg-white border border-purple-200 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-choco focus:outline-none focus:ring-2 focus:ring-purple-400">
-                    <button onclick="applyRoomCode()" class="bg-purple-600 hover:bg-purple-700 text-white font-bold text-sm px-4 py-2.5 rounded-xl transition-colors whitespace-nowrap">
-                        입장하기
-                    </button>
-                </div>
-            </div>
-            <div class="flex items-center justify-between text-xs text-chocoLight bg-cream p-3 rounded-xl">
-                <span>현재 접속된 방: <strong id="modal-current-room" class="text-choco">hoguk-yeongsu</strong></span>
-                <button onclick="copyRoomLink()" class="text-purple-700 font-bold hover:underline">📋 방 코드 복사</button>
-            </div>
+          <button onclick="copyKakaoText()"
+            class="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold px-3.5 py-2 rounded-2xl bg-[#FEE500] hover:bg-[#F7DC00] text-[#3C1E1E] shadow-sm transition">
+            💬 카톡 공유 복사
+          </button>
+
+          <button onclick="saveAsImage()"
+            class="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold px-3.5 py-2 rounded-2xl bg-[#E0F2FE] hover:bg-[#BAE6FD] text-[#075985] border border-[#BAE6FD] transition">
+            📸 이미지 저장
+          </button>
         </div>
-    </div>
+      </div>
 
-    <!-- 2. 랜덤 메뉴 뽑기 모달 -->
-    <div id="roulette-modal" class="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
-        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border-2 border-[#F2EAE0] text-center">
-            <div class="flex justify-between items-center mb-2">
-                <span class="text-xs font-bold bg-softYellow text-amber-800 px-2.5 py-1 rounded-full">결정장애 해결사</span>
-                <button onclick="closeModal('roulette-modal')" class="text-chocoLight hover:text-choco text-xl font-bold w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center">✕</button>
-            </div>
-            <h3 class="font-jua text-2xl text-choco mb-1">🎲 오늘의 도시락 메뉴 뽑기</h3>
-            <p class="text-xs text-chocoLight mb-5">버튼을 눌러 직장인 맞춤 꿀맛 도시락 메뉴를 추천받아보세요!</p>
+      <!-- 구분선 -->
+      <hr class="my-4 border-dashed border-[#EFE6D8]" />
 
-            <!-- 룰렛 결과 디스플레이 -->
-            <div class="bg-gradient-to-br from-softYellow via-amber-50 to-softPeach rounded-2xl p-6 mb-5 border-2 border-amber-200/80 shadow-inner relative overflow-hidden">
-                <div id="roulette-emoji" class="text-5xl mb-2 transition-transform duration-200">🍱</div>
-                <div id="roulette-result" class="font-jua text-2xl sm:text-3xl text-choco">두구두구... 뭐가 나올까?</div>
-                <div id="roulette-sub" class="text-xs text-chocoLight mt-1">아래 뽑기 버튼을 눌러주세요!</div>
-            </div>
-
-            <!-- 뽑기 버튼 -->
-            <button id="btn-spin" onclick="spinMenuRoulette()" class="w-full bg-amber-400 hover:bg-amber-500 text-choco font-jua text-xl py-3 rounded-2xl shadow-md transition-all active:scale-95 mb-4">
-                🎰 룰렛 돌리기!
-            </button>
-
-            <!-- 뽑힌 메뉴 요일에 바로 넣기 -->
-            <div id="roulette-add-section" class="hidden pt-4 border-t border-dashed border-gray-200">
-                <p class="text-xs font-bold text-choco mb-2">이 메뉴를 어느 요일에 추가할까요?</p>
-                <div id="roulette-day-buttons" class="grid grid-cols-7 gap-1.5">
-                    <!-- 월~일 버튼 JS 생성 -->
-                </div>
-            </div>
+      <!-- 주차 네비게이션 & 인기 반찬 퀵 칩 -->
+      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+        <!-- 주차 이동 -->
+        <div class="inline-flex items-center gap-2 bg-[#FAF5EE] px-3 py-1.5 rounded-2xl border border-[#EFE6D8] self-start">
+          <button onclick="moveWeek(-1)" class="px-2.5 py-1 rounded-xl bg-white hover:bg-[#FFF0E5] text-xs font-bold text-[#6D5A4F] border border-[#EFE6D8] transition">
+            &lt; 지난주
+          </button>
+          <span id="week-label" class="font-title text-base sm:text-lg text-[#4A3B32] px-2">
+            2026년 11월 4주차 (11/23 ~ 11/29)
+          </span>
+          <button onclick="moveWeek(1)" class="px-2.5 py-1 rounded-xl bg-white hover:bg-[#FFF0E5] text-xs font-bold text-[#6D5A4F] border border-[#EFE6D8] transition">
+            다음주 &gt;
+          </button>
+          <button onclick="goTodayWeek()" class="ml-1 px-2 py-1 rounded-lg bg-[#FF8A65] text-white text-[11px] font-bold hover:bg-[#FF7043] transition">
+            이번주
+          </button>
         </div>
-    </div>
 
-    <!-- 3. 빠른 칩 요일 선택 모달 -->
-    <div id="chip-day-modal" class="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
-        <div class="bg-white rounded-3xl max-w-sm w-full p-5 shadow-2xl border-2 border-[#F2EAE0] text-center">
-            <h3 class="font-jua text-xl text-choco mb-1">
-                <span id="selected-chip-name" class="text-teal-700 bg-softMint px-2 py-0.5 rounded-lg">제육볶음</span> 추가하기
-            </h3>
-            <p class="text-xs text-chocoLight mb-4">어느 요일 도시락에 쏙 넣어드릴까요?</p>
-            <div id="chip-day-buttons" class="grid grid-cols-4 gap-2 mb-4">
-                <!-- 요일 버튼들 -->
-            </div>
-            <button onclick="closeModal('chip-day-modal')" class="w-full py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-xs font-bold text-gray-600">
-                취소
-            </button>
+        <!-- 인기반찬 쏙 칩 -->
+        <div class="flex flex-wrap items-center gap-1.5">
+          <span class="text-xs font-bold text-[#8A796E] mr-1">✨ 인기반찬 쏙:</span>
+          <div id="quick-chips-container" class="flex flex-wrap gap-1.5"></div>
         </div>
-    </div>
-
-    <!-- 4. 초기화 확인 커스텀 모달 (alert/confirm 대체) -->
-    <div id="reset-modal" class="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
-        <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border-2 border-[#F2EAE0] text-center">
-            <div class="text-4xl mb-2">🥺</div>
-            <h3 class="font-jua text-xl text-choco mb-2">이번 주 식단표를 초기화할까요?</h3>
-            <p class="text-xs text-chocoLight leading-relaxed mb-5">
-                현재 보고 있는 주차의 메뉴가 맛있는 기본 예시 도시락 식단으로 되돌아갑니다.
-            </p>
-            <div class="flex gap-2">
-                <button onclick="closeModal('reset-modal')" class="flex-1 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-sm font-bold text-gray-600">
-                    아니요, 유지할래요
-                </button>
-                <button onclick="confirmResetWeek()" class="flex-1 py-2.5 rounded-xl bg-rose-500 hover:bg-rose-600 text-sm font-bold text-white">
-                    네, 초기화할래요
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Firebase SDK 및 앱 로직 -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-        // 사용자 제공 Firebase 설정값
-        const firebaseConfig = {
-            apiKey: "AIzaSyC-_QWMSDxZ9xb7nlMxlbB5qsMd-4ctz6M",
-            authDomain: "lunch-menu-594f3.firebaseapp.com",
-            projectId: "lunch-menu-594f3",
-            storageBucket: "lunch-menu-594f3.firebasestorage.app",
-            messagingSenderId: "397877090570",
-            appId: "1:397877090570:web:97af09be36c548d2c702f3"
-        };
-
-        // ==========================================
-        // 1. 전역 상태 및 날짜 설정 (2026년 11월 23일 월요일 기준)
-        // ==========================================
-        const BASE_TODAY = new Date(2026, 10, 23); // 2026-11-23 (월요일)
-        BASE_TODAY.setHours(0, 0, 0, 0);
-
-        let currentWeekMonday = getMonday(new Date(BASE_TODAY));
-        let currentRoomCode = 'hoguk-yeongsu'; // 기본 공유 방 코드
-        let weekData = {}; // 현재 주차의 7일 데이터
-        let boardTitle = '호국 & 영수 도시락 급식표 🍱';
-        
-        // Firebase 관련 변수
-        let db = null;
-        let unsubscribeSnapshot = null;
-        let isFirebaseReady = false;
-        let inMemoryFallbackStore = {}; // 오프라인 백업 저장소
-
-        // 담당자 옵션 순환 배열 (호국 / 영수 / 같이 / 외식·휴무)
-        const OWNERS = [
-            { id: 'hoguk', label: '호국 🙋‍♂️', bg: 'bg-softBlue', text: 'text-sky-900', border: 'border-sky-300' },
-            { id: 'yeongsu', label: '영수 👩‍💼', bg: 'bg-softCoral', text: 'text-rose-900', border: 'border-rose-300' },
-            { id: 'together', label: '같이 👯‍♀️', bg: 'bg-softMint', text: 'text-teal-900', border: 'border-teal-300' },
-            { id: 'out', label: '외식/휴무 🍽️', bg: 'bg-gray-100', text: 'text-gray-600', border: 'border-gray-300' }
-        ];
-
-        // 빠른 추천 반찬 칩 목록
-        const QUICK_CHIPS = [
-            '계란말이', '소시지야채볶음', '제육볶음', '참치마요주먹밥', 
-            '김치볶음밥', '유부초밥', '닭가슴살샐러드', '진미채볶음', '어묵볶음'
-        ];
-
-        // 빠른 추천 반찬 칩 목록
-        const QUICK_CHIPS = [
-            '제육볶음', '계란말이', '스팸구이', '소시지야채볶음', 
-            '김치볶음밥', '유부초밥', '멸치볶음', '닭가슴살샐러드', '과일디저트 🍎'
-        ];
-
-        // 빠른 추천 반찬 칩 목록
-        const QUICK_CHIPS = [
-            '제육볶음', '계란말이', '유부초밥', '닭가슴살 샐러드', 
-            '김치볶음밥', '떡갈비', '비엔나소시지', '참치마요덮밥', '과일디저트 🍎'
-        ];
-
-        // 룰렛 추천 메뉴 풀
-        const ROULETTE_MENUS = [
-            { name: '매콤달콤 제육볶음 & 쌈채소', emoji: '🥩', sub: '흰쌀밥에 슥슥 비벼 먹으면 꿀맛!' },
-            { name: '폭신폭신 명란 계란말이 도시락', emoji: '🍳', sub: '부드럽고 짭짤한 밥도둑 반찬' },
-            { name: '한입 쏙 참치마요 유부초밥', emoji: '🍙', sub: '전자레인지 안 돌려도 맛있어요!' },
-            { name: '단호박 에그슬럿 & 닭가슴살 샐러드', emoji: '🥗', sub: '가볍고 든든한 다이어트 식단' },
-            { name: '모짜렐라 치즈 김치볶음밥', emoji: '🥘', sub: '반숙 계란후라이 꼭 올려오기!' },
-            { name: '달콤짭짤 궁중 떡갈비 & 감자채볶음', emoji: '🍖', sub: '호불호 없는 실패 없는 도시락 메뉴' },
-            { name: '베이컨 아스파라거스 말이 & 주먹밥', emoji: '🥓', sub: '비주얼도 예쁘고 먹기도 편해요' },
-            { name: '스팸 무스비 & 미니 우동컵', emoji: '🍱', sub: '따끈한 국물이랑 같이 먹으면 최고!' },
-            { name: '새우 볶음밥 & 탕수만두', emoji: '🍤', sub: '중식당 부럽지 않은 든든한 한 끼' },
-            { name: '오늘은 도시락 휴무! 맛집 탐방 데이', emoji: '🍝', sub: '가끔은 회사 근처 핫플에서 외식해요!' }
-        ];
-
-        const DAY_NAMES = ['월', '화', '수', '목', '금', '토', '일'];
-        const TAPE_COLORS = ['', 'mint', 'peach', '', 'mint', 'peach', 'blue'];
-
-        // ==========================================
-        // 4. Firebase 초기화 및 실시간 동기화
-        // ==========================================
-        function initFirebaseAndSync() {
-            const statusEl = document.getElementById('sync-status');
-            statusEl.className = "inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200";
-            statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span> 연결 중...`;
-
-            try {
-                const app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                isFirebaseReady = true;
-
-                subscribeToCurrentWeek();
-            } catch (error) {
-                console.warn("Firebase 초기화 실패, 오프라인 모드로 동작합니다:", error);
-                isFirebaseReady = false;
-                setOfflineStatus();
-                loadFromMemoryFallback();
-            }
-        }
-
-        function setOnlineStatus() {
-            const statusEl = document.getElementById('sync-status');
-            statusEl.className = "inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200";
-            statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500"></span> 실시간 동기화 연결됨 (방: ${escapeHtml(currentRoomCode)})`;
-        }
-
-        function setOfflineStatus() {
-            const statusEl = document.getElementById('sync-status');
-            statusEl.className = "inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200";
-            statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500"></span> 오프라인 모드`;
-        }
-
-        function getDocId() {
-            const weekKey = formatDateKey(currentWeekMonday);
-            const safeRoom = currentRoomCode.replace(/[^a-zA-Z0-9가-힣_-]/g, '') || 'hoguk-yeongsu';
-            return `${safeRoom}_${weekKey}`;
-        }
-
-        function subscribeToCurrentWeek() {
-            const docId = getDocId();
-            renderWeekHeader();
-
-            if (!isFirebaseReady || !db) {
-                loadFromMemoryFallback();
-                return;
-            }
-
-            if (unsubscribeSnapshot) {
-                unsubscribeSnapshot();
-            }
-
-            const docRef = doc(db, 'lunch_rooms', docId);
-
-            unsubscribeSnapshot = onSnapshot(docRef, async (docSnap) => {
-                setOnlineStatus();
-                if (docSnap.exists()) {
-                    const remoteData = docSnap.data();
-                    weekData = remoteData.days || createDefaultWeekData(currentWeekMonday);
-                    if (remoteData.title && document.activeElement !== document.getElementById('board-title')) {
-                        boardTitle = remoteData.title;
-                        document.getElementById('board-title').innerText = boardTitle;
-                    }
-                    
-                    // 현재 입력 중인 포커스 유지하며 부드럽게 렌더링
-                    const activeId = document.activeElement ? document.activeElement.id : null;
-                    const activeVal = document.activeElement && 'value' in document.activeElement ? document.activeElement.value : null;
-                    renderCalendar();
-                    if (activeId) {
-                        const el = document.getElementById(activeId);
-                        if (el) {
-                            el.focus();
-                            if (activeVal !== null && 'value' in el) el.value = activeVal;
-                        }
-                    }
-                } else {
-                    // 문서가 없으면 기본 예시 데이터 생성 후 저장
-                    weekData = createDefaultWeekData(currentWeekMonday);
-                    renderCalendar();
-                    await saveCurrentWeekData();
-                }
-            }, (error) => {
-                console.error("Firestore 구독 오류:", error);
-                setOfflineStatus();
-                showToast("Firestore 권한 또는 네트워크 오류로 오프라인 모드로 전환됩니다.", "error");
-                loadFromMemoryFallback();
-            });
-        }
-
-        function loadFromMemoryFallback() {
-            const docId = getDocId();
-            if (!inMemoryFallbackStore[docId]) {
-                inMemoryFallbackStore[docId] = {
-                    title: boardTitle,
-                    days: createDefaultWeekData(currentWeekMonday)
-                };
-            }
-            weekData = inMemoryFallbackStore[docId].days;
-            renderCalendar();
-        }
-
-        async function saveCurrentWeekData() {
-            const docId = getDocId();
-            inMemoryFallbackStore[docId] = {
-                title: boardTitle,
-                days: weekData
-            };
-
-            if (!isFirebaseReady || !db) return;
-
-            try {
-                const docRef = doc(db, 'lunch_rooms', docId);
-                await setDoc(docRef, {
-                    roomCode: currentRoomCode,
-                    weekStart: formatDateKey(currentWeekMonday),
-                    title: boardTitle,
-                    days: weekData,
-                    updatedAt: Date.now()
-                }, { merge: true });
-            } catch (error) {
-                console.error("저장 오류:", error);
-                setOfflineStatus();
-            }
-        }
-
-        function getDocId() {
-            const weekKey = formatDateKey(currentWeekMonday);
-            // 방 코드에 슬래시 등 특수문자 제거
-            const safeRoom = currentRoomCode.replace(/[^a-zA-Z0-9가-힣_-]/g, '') || 'hoguk-yeongsu-lunch';
-            return `${safeRoom}_${weekKey}`;
-        }
-
-        function subscribeToCurrentWeek() {
-            const docId = getDocId();
-            renderWeekHeader();
-
-            if (!isFirebaseReady || !currentUser || !db) {
-                loadFromMemoryFallback();
-                return;
-            }
-
-            if (unsubscribeSnapshot) {
-                unsubscribeSnapshot();
-            }
-
-            // RULE 1: Strict Paths (/artifacts/{appId}/public/data/{collectionName}/{docId})
-            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'lunch_schedules', docId);
-
-            unsubscribeSnapshot = onSnapshot(docRef, async (docSnap) => {
-                if (docSnap.exists()) {
-                    const remoteData = docSnap.data();
-                    weekData = remoteData.days || createDefaultWeekData(currentWeekMonday);
-                    if (remoteData.title && document.activeElement !== document.getElementById('board-title')) {
-                        boardTitle = remoteData.title;
-                        document.getElementById('board-title').innerText = boardTitle;
-                    }
-                    renderCalendar();
-                } else {
-                    // 문서가 없으면 기본 예시 데이터 생성 후 저장
-                    weekData = createDefaultWeekData(currentWeekMonday);
-                    renderCalendar();
-                    await saveCurrentWeekData();
-                }
-            }, (error) => {
-                console.error("Firestore 구독 오류:", error);
-                showToast("데이터를 불러오는 중 일시적인 오류가 발생했어요.", "error");
-            });
-        }
-
-        function loadFromMemoryFallback() {
-            const docId = getDocId();
-            if (!inMemoryFallbackStore[docId]) {
-                inMemoryFallbackStore[docId] = {
-                    title: boardTitle,
-                    days: createDefaultWeekData(currentWeekMonday)
-                };
-            }
-            weekData = inMemoryFallbackStore[docId].days;
-            renderCalendar();
-        }
-
-        async function saveCurrentWeekData() {
-            const docId = getDocId();
-            inMemoryFallbackStore[docId] = {
-                title: boardTitle,
-                days: weekData
-            };
-
-            if (!isFirebaseReady || !currentUser || !db) return;
-
-            try {
-                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'lunch_schedules', docId);
-                await setDoc(docRef, {
-                    roomCode: currentRoomCode,
-                    weekStart: formatDateKey(currentWeekMonday),
-                    title: boardTitle,
-                    days: weekData,
-                    updatedAt: Date.now()
-                }, { merge: true });
-            } catch (error) {
-                console.error("저장 오류:", error);
-            }
-        }
-
-        // ==========================================
-        // 5. UI 렌더링 로직
-        // ==========================================
-        function renderWeekHeader() {
-            document.getElementById('week-title').innerText = getWeekLabel(currentWeekMonday);
-            
-            const baseMondayStr = formatDateKey(getMonday(BASE_TODAY));
-            const currentMondayStr = formatDateKey(currentWeekMonday);
-            const btnToday = document.getElementById('btn-today-week');
-            
-            if (baseMondayStr !== currentMondayStr) {
-                btnToday.classList.remove('hidden');
-            } else {
-                btnToday.classList.add('hidden');
-            }
-        }
-
-        function renderQuickChips() {
-            const container = document.getElementById('quick-chips');
-            container.innerHTML = QUICK_CHIPS.map(chip => `
-                <button onclick="openChipModal('${chip}')" 
-                    class="px-2.5 py-1 rounded-full bg-white hover:bg-softYellow text-choco text-xs font-medium border border-[#E6DCD0] shadow-2xs whitespace-nowrap transition-all active:scale-95 flex items-center gap-1">
-                    <span class="text-amber-500 font-bold">+</span> ${chip}
-                </button>
-            `).join('');
-        }
-
-        function renderCalendar() {
-            const weekdayGrid = document.getElementById('weekday-grid');
-            const weekendGrid = document.getElementById('weekend-grid');
-            weekdayGrid.innerHTML = '';
-            weekendGrid.innerHTML = '';
-
-            const todayStr = formatDateKey(BASE_TODAY);
-
-            for (let i = 0; i < 7; i++) {
-                const dateObj = new Date(currentWeekMonday);
-                dateObj.setDate(currentWeekMonday.getDate() + i);
-                const dateKey = formatDateKey(dateObj);
-                const dayName = DAY_NAMES[i];
-                const isWeekend = (i === 5 || i === 6);
-                const isSaturday = (i === 5);
-                const isSunday = (i === 6);
-                const isToday = (dateKey === todayStr);
-
-                const dayInfo = weekData[dateKey] || { owner: 'hoguk', menus: [], memo: '' };
-                const ownerObj = OWNERS.find(o => o.id === dayInfo.owner) || OWNERS[0];
-
-                // 카드 배경 및 테두리 스타일
-                let cardBg = 'bg-white';
-                let headerBg = 'bg-[#FAF6F0]';
-                let dayBadgeColor = 'text-choco';
-
-                if (isSaturday) {
-                    cardBg = 'bg-[#F8FBFF]';
-                    headerBg = 'bg-softBlue/60';
-                    dayBadgeColor = 'text-sky-700';
-                } else if (isSunday) {
-                    cardBg = 'bg-[#FFF9FA]';
-                    headerBg = 'bg-softPeach/50';
-                    dayBadgeColor = 'text-rose-600';
-                }
-
-                const todayRing = isToday 
-                    ? 'ring-3 ring-amber-400 border-amber-400 shadow-diary-hover' 
-                    : 'border-[#EDE4D8] shadow-diary hover:shadow-diary-hover';
-
-                const tapeClass = TAPE_COLORS[i] || '';
-                const listMinHeight = isWeekend ? 'min-h-[85px] max-h-[160px]' : 'min-h-[125px] max-h-[220px]';
-
-                // 메뉴 아이템 HTML 생성
-                const menuItemsHtml = dayInfo.menus.length > 0 
-                    ? dayInfo.menus.map((item, idx) => `
-                        <li class="group flex items-start justify-between gap-2 py-1.5 px-2 rounded-xl hover:bg-cream transition-colors ${item.done ? 'menu-done' : ''}">
-                            <button onclick="toggleMenuDone('${dateKey}', ${idx})" class="flex items-start gap-2 text-left flex-1 min-w-0">
-                                <span class="mt-0.5 w-4 h-4 rounded-md border flex-shrink-0 flex items-center justify-center text-[10px] transition-colors ${item.done ? 'bg-teal-400 border-teal-400 text-white' : 'border-amber-300 bg-white'}">
-                                    ${item.done ? '✓' : ''}
-                                </span>
-                                <span class="menu-text text-xs sm:text-[13px] font-medium text-choco break-keep leading-snug">
-                                    ${escapeHtml(item.text)}
-                                </span>
-                            </button>
-                            <button onclick="deleteMenuItem('${dateKey}', ${idx})" 
-                                class="opacity-60 sm:opacity-0 group-hover:opacity-100 text-gray-400 hover:text-rose-500 text-xs px-1 rounded transition-opacity"
-                                title="메뉴 삭제">
-                                ✕
-                            </button>
-                        </li>
-                    `).join('')
-                    : `<div class="py-5 text-center text-xs text-gray-400 flex flex-col items-center justify-center gap-1">
-                        <span class="text-lg opacity-60">${isWeekend ? '🛋️' : '🍽️'}</span>
-                        <span>${isWeekend ? '주말 휴식 또는 특식!' : '메뉴를 추가해주세요'}</span>
-                       </div>`;
-
-                const cardHtml = `
-                    <div class="relative rounded-3xl ${cardBg} border-2 ${todayRing} flex flex-col justify-between transition-all duration-200 pt-2">
-                        <!-- 상단 마스킹 테이프 장식 -->
-                        <div class="masking-tape ${tapeClass} rounded-xs"></div>
-
-                        <div>
-                            <!-- 1. 날짜 및 요일 헤더 -->
-                            <div class="${headerBg} mx-2.5 mt-1.5 px-3.5 py-2.5 rounded-2xl flex items-center justify-between">
-                                <div class="flex items-center gap-1.5">
-                                    <span class="font-jua text-lg ${dayBadgeColor}">
-                                        ${formatShortDate(dateObj)} (${dayName})
-                                    </span>
-                                    ${isToday ? `<span class="bg-amber-400 text-choco font-extrabold text-[10px] px-2 py-0.5 rounded-full shadow-2xs tracking-wider">TODAY</span>` : ''}
-                                </div>
-                                
-                                <!-- 2. 담당자 선택 뱃지 (클릭 시 순환 전환: 호국 -> 영수 -> 같이 -> 외식·휴무) -->
-                                <button onclick="cycleOwner('${dateKey}')" 
-                                    class="${ownerObj.bg} ${ownerObj.text} border ${ownerObj.border} text-[11px] font-bold px-2.5 py-1 rounded-full shadow-2xs hover:brightness-95 active:scale-95 transition-all cursor-pointer"
-                                    title="클릭해서 담당자를 변경하세요!">
-                                    ${ownerObj.label}
-                                </button>
-                            </div>
-
-                            <!-- 3. 메인 메뉴 및 반찬 리스트 -->
-                            <div class="px-3 pt-3 pb-2">
-                                <ul class="space-y-0.5 ${listMinHeight} overflow-y-auto pr-0.5">
-                                    ${menuItemsHtml}
-                                </ul>
-
-                                <!-- 메뉴 직접 입력 폼 -->
-                                <form onsubmit="handleAddMenu(event, '${dateKey}')" class="mt-2.5 flex items-center gap-1.5">
-                                    <input type="text" id="input-${dateKey}" placeholder="+ 메뉴 입력 후 Enter" 
-                                        class="w-full bg-cream/90 focus:bg-white border border-[#E5DDD0] focus:border-amber-400 rounded-xl px-2.5 py-1.5 text-xs text-choco placeholder-gray-400 outline-none transition-colors">
-                                    <button type="submit" 
-                                        class="bg-softYellow hover:bg-amber-300 text-amber-900 font-bold text-xs w-7 h-7 rounded-xl border border-amber-200 flex-shrink-0 flex items-center justify-center transition-colors active:scale-90"
-                                        title="메뉴 추가">
-                                        +
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
-
-                        <!-- 4. 한줄 메모 / 준비물 칸 -->
-                        <div class="px-3 pb-3 pt-1.5 mt-auto">
-                            <div class="bg-[#FAF7F2] rounded-xl px-2.5 py-1.5 border border-dashed border-[#E2D8C8] flex items-center gap-1.5">
-                                <span class="text-xs select-none" title="한줄 메모/준비물">📌</span>
-                                <input type="text" 
-                                    value="${escapeHtml(dayInfo.memo || '')}" 
-                                    onchange="updateMemo('${dateKey}', this.value)"
-                                    placeholder="준비물/한줄 메모..." 
-                                    class="w-full bg-transparent text-[11px] text-chocoLight focus:text-choco font-medium placeholder-gray-400 outline-none">
-                            </div>
-                        </div>
-                    </div>
-                `;
-
-                if (isWeekend) {
-                    weekendGrid.insertAdjacentHTML('beforeend', cardHtml);
-                } else {
-                    weekdayGrid.insertAdjacentHTML('beforeend', cardHtml);
-                }
-            }
-        }
-
-        // ==========================================
-        // 6. 사용자 인터랙션 핸들러 (전역 노출)
-        // ==========================================
-        window.changeWeek = function(offset) {
-            currentWeekMonday.setDate(currentWeekMonday.getDate() + (offset * 7));
-            subscribeToCurrentWeek();
-        };
-
-        window.goToTodayWeek = function() {
-            currentWeekMonday = getMonday(new Date(BASE_TODAY));
-            subscribeToCurrentWeek();
-        };
-
-        // 담당자 뱃지 순환 변경
-        window.cycleOwner = async function(dateKey) {
-            if (!weekData[dateKey]) return;
-            const currentId = weekData[dateKey].owner;
-            const idx = OWNERS.findIndex(o => o.id === currentId);
-            const nextOwner = OWNERS[(idx + 1) % OWNERS.length];
-            weekData[dateKey].owner = nextOwner.id;
-            renderCalendar();
-            await saveCurrentWeekData();
-        };
-
-        // 메뉴 추가
-        window.handleAddMenu = async function(e, dateKey) {
-            e.preventDefault();
-            const input = document.getElementById(`input-${dateKey}`);
-            const text = input.value.trim();
-            if (!text) return;
-
-            if (!weekData[dateKey]) {
-                weekData[dateKey] = { owner: 'hoguk', menus: [], memo: '' };
-            }
-
-            weekData[dateKey].menus.push({
-                id: 'item_' + Date.now() + Math.random().toString(36).substr(2, 4),
-                text: text,
-                done: false
-            });
-
-            input.value = '';
-            renderCalendar();
-            await saveCurrentWeekData();
-        };
-
-        // 메뉴 완료 체크 토글
-        window.toggleMenuDone = async function(dateKey, index) {
-            if (!weekData[dateKey] || !weekData[dateKey].menus[index]) return;
-            weekData[dateKey].menus[index].done = !weekData[dateKey].menus[index].done;
-            renderCalendar();
-            await saveCurrentWeekData();
-        };
-
-        // 개별 메뉴 삭제
-        window.deleteMenuItem = async function(dateKey, index) {
-            if (!weekData[dateKey] || !weekData[dateKey].menus[index]) return;
-            weekData[dateKey].menus.splice(index, 1);
-            renderCalendar();
-            await saveCurrentWeekData();
-        };
-
-        // 한줄 메모 수정
-        window.updateMemo = async function(dateKey, newMemo) {
-            if (!weekData[dateKey]) return;
-            weekData[dateKey].memo = newMemo.trim();
-            await saveCurrentWeekData();
-        };
-
-        // 상단 타이틀 수정 저장
-        const titleEl = document.getElementById('board-title');
-        titleEl.addEventListener('blur', async () => {
-            const newTitle = titleEl.innerText.trim();
-            if (newTitle && newTitle !== boardTitle) {
-                boardTitle = newTitle;
-                await saveCurrentWeekData();
-                showToast("급식표 제목이 저장되었어요! ✨");
-            } else if (!newTitle) {
-                titleEl.innerText = boardTitle;
-            }
-        });
-        titleEl.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                titleEl.blur();
-            }
-        });
-
-        // ==========================================
-        // 7. 편의 기능: 칩 추가 / 룰렛 뽑기 / 방 코드 / 카톡 복사 / 이미지 저장
-        // ==========================================
-        let pendingChipText = '';
-        window.openChipModal = function(chipText) {
-            pendingChipText = chipText;
-            document.getElementById('selected-chip-name').innerText = chipText;
-            
-            const btnContainer = document.getElementById('chip-day-buttons');
-            btnContainer.innerHTML = '';
-
-            for (let i = 0; i < 7; i++) {
-                const d = new Date(currentWeekMonday);
-                d.setDate(currentWeekMonday.getDate() + i);
-                const dateKey = formatDateKey(d);
-                const label = `${formatShortDate(d)} (${DAY_NAMES[i]})`;
-
-                const btn = document.createElement('button');
-                btn.className = "py-2 px-1 rounded-xl bg-cream hover:bg-softYellow border border-[#E6DCD0] text-xs font-bold text-choco transition-all active:scale-95";
-                btn.innerText = label;
-                btn.onclick = async () => {
-                    if (!weekData[dateKey]) weekData[dateKey] = { owner: 'hoguk', menus: [], memo: '' };
-                    weekData[dateKey].menus.push({
-                        id: 'chip_' + Date.now(),
-                        text: pendingChipText,
-                        done: false
-                    });
-                    closeModal('chip-day-modal');
-                    renderCalendar();
-                    await saveCurrentWeekData();
-                    showToast(`${label}에 '${pendingChipText}' 추가 완료! 🍱`);
-                };
-                btnContainer.appendChild(btn);
-            }
-
-            openModal('chip-day-modal');
-        };
-
-        // 룰렛 뽑기
-        let currentRouletteMenu = null;
-        window.openRouletteModal = function() {
-            document.getElementById('roulette-add-section').classList.add('hidden');
-            openModal('roulette-modal');
-        };
-
-        window.spinMenuRoulette = function() {
-            const btn = document.getElementById('btn-spin');
-            const emojiEl = document.getElementById('roulette-emoji');
-            const resultEl = document.getElementById('roulette-result');
-            const subEl = document.getElementById('roulette-sub');
-            const addSection = document.getElementById('roulette-add-section');
-
-            btn.disabled = true;
-            btn.classList.add('opacity-70');
-            addSection.classList.add('hidden');
-
-            let count = 0;
-            const maxSpins = 16;
-            const interval = setInterval(() => {
-                const rand = ROULETTE_MENUS[Math.floor(Math.random() * ROULETTE_MENUS.length)];
-                emojiEl.innerText = rand.emoji;
-                resultEl.innerText = rand.name;
-                subEl.innerText = '메뉴 고르는 중...';
-                emojiEl.style.transform = count % 2 === 0 ? 'scale(1.15) rotate(-6deg)' : 'scale(1.15) rotate(6deg)';
-                count++;
-
-                if (count >= maxSpins) {
-                    clearInterval(interval);
-                    emojiEl.style.transform = 'scale(1) rotate(0deg)';
-                    btn.disabled = false;
-                    btn.classList.remove('opacity-70');
-
-                    const finalPick = ROULETTE_MENUS[Math.floor(Math.random() * ROULETTE_MENUS.length)];
-                    currentRouletteMenu = finalPick.name;
-                    emojiEl.innerText = finalPick.emoji;
-                    resultEl.innerText = finalPick.name;
-                    subEl.innerText = finalPick.sub;
-
-                    if (typeof confetti === 'function') {
-                        confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
-                    }
-
-                    // 요일 버튼 렌더링
-                    const dayBtns = document.getElementById('roulette-day-buttons');
-                    dayBtns.innerHTML = '';
-                    for (let i = 0; i < 7; i++) {
-                        const d = new Date(currentWeekMonday);
-                        d.setDate(currentWeekMonday.getDate() + i);
-                        const dateKey = formatDateKey(d);
-                        
-                        const b = document.createElement('button');
-                        b.className = "py-2 rounded-xl bg-softMint hover:bg-teal-200 text-teal-900 font-bold text-xs border border-teal-300 transition-all active:scale-90";
-                        b.innerText = DAY_NAMES[i];
-                        b.onclick = async () => {
-                            if (!weekData[dateKey]) weekData[dateKey] = { owner: 'hoguk', menus: [], memo: '' };
-                            weekData[dateKey].menus.push({
-                                id: 'spin_' + Date.now(),
-                                text: currentRouletteMenu,
-                                done: false
-                            });
-                            closeModal('roulette-modal');
-                            renderCalendar();
-                            await saveCurrentWeekData();
-                            showToast(`${DAY_NAMES[i]}요일에 추천 메뉴가 들어갔어요! 🎉`);
-                        };
-                        dayBtns.appendChild(b);
-                    }
-                    addSection.classList.remove('hidden');
-                }
-            }, 65);
-        };
-
-        // 급식방 코드 변경
-        window.openRoomModal = function() {
-            document.getElementById('room-code-input').value = currentRoomCode;
-            document.getElementById('modal-current-room').innerText = currentRoomCode;
-            openModal('room-modal');
-        };
-
-        window.applyRoomCode = function() {
-            const val = document.getElementById('room-code-input').value.trim();
-            if (!val) {
-                showToast("방 코드를 입력해주세요!", "error");
-                return;
-            }
-            currentRoomCode = val;
-            document.getElementById('current-room-badge').innerText = currentRoomCode;
-            document.getElementById('modal-current-room').innerText = currentRoomCode;
-            closeModal('room-modal');
-            subscribeToCurrentWeek();
-            showToast(`'${currentRoomCode}' 급식방으로 입장했어요! 🔑`);
-        };
-
-        window.copyRoomLink = function() {
-            copyTextSafe(currentRoomCode);
-            showToast(`방 코드 '${currentRoomCode}'가 복사되었어요! 호국 & 영수 톡방에 공유하세요 💬`);
-        };
-
-        // 카톡 공유용 텍스트 복사
-        window.copyMenuToClipboard = function() {
-            const weekTitle = getWeekLabel(currentWeekMonday);
-            let lines = [`🍱 [${boardTitle}]`, `📅 ${weekTitle}`, `━━━━━━━━━━━━━━`];
-
-            for (let i = 0; i < 7; i++) {
-                const d = new Date(currentWeekMonday);
-                d.setDate(currentWeekMonday.getDate() + i);
-                const dateKey = formatDateKey(d);
-                const info = weekData[dateKey] || { owner: 'hoguk', menus: [], memo: '' };
-                const ownerObj = OWNERS.find(o => o.id === info.owner) || OWNERS[0];
-
-                const menuStr = info.menus.length > 0 
-                    ? info.menus.map(m => m.text).join(', ')
-                    : '미정';
-
-                lines.push(`▪ ${formatShortDate(d)}(${DAY_NAMES[i]}) [${ownerObj.label}] : ${menuStr}`);
-                if (info.memo) {
-                    lines.push(`   └ 📌 ${info.memo}`);
-                }
-            }
-            lines.push(`━━━━━━━━━━━━━━`);
-            lines.push(`🔑 급식방 코드: ${currentRoomCode}`);
-
-            copyTextSafe(lines.join('\n'));
-            showToast("카톡방에 붙여넣기 좋게 식단표가 복사되었어요! 💛");
-        };
-
-        // 클립보드 복사 유틸 (iFrame 호환 execCommand 우선 사용)
-        function copyTextSafe(text) {
-            const textarea = document.createElement('textarea');
-            textarea.value = text;
-            textarea.style.position = 'fixed';
-            textarea.style.opacity = '0';
-            document.body.appendChild(textarea);
-            textarea.select();
-            try {
-                document.execCommand('copy');
-            } catch (err) {
-                console.error('복사 실패:', err);
-            }
-            document.body.removeChild(textarea);
-        }
-
-        // 식단표 이미지로 저장
-        window.saveAsImage = async function() {
-            const target = document.getElementById('capture-area');
-            showToast("예쁜 식단표 이미지를 생성하고 있어요... 📸");
-
-            try {
-                const canvas = await html2canvas(target, {
-                    scale: 2,
-                    backgroundColor: '#FDFBF7',
-                    useCORS: true,
-                    logging: false
-                });
-                const link = document.createElement('a');
-                const weekStr = formatDateKey(currentWeekMonday);
-                link.download = `우리들의_도시락급식표_${weekStr}.png`;
-                link.href = canvas.toDataURL('image/png');
-                link.click();
-                showToast("식단표 이미지가 저장되었어요! 갤러리/다운로드함을 확인하세요 ✨");
-            } catch (err) {
-                console.error("이미지 저장 오류:", err);
-                showToast("이미지 저장 중 오류가 발생했어요.", "error");
-            }
-        };
-
-        // 초기화 모달
-        window.openResetModal = function() {
-            openModal('reset-modal');
-        };
-
-        window.confirmResetWeek = async function() {
-            weekData = createDefaultWeekData(currentWeekMonday);
-            closeModal('reset-modal');
-            renderCalendar();
-            await saveCurrentWeekData();
-            showToast("이번 주 식단표가 기본 예시 식단으로 초기화되었어요! 🔄");
-        };
-
-        // 모달 제어 유틸
-        window.openModal = function(id) {
-            const el = document.getElementById(id);
-            el.classList.remove('hidden');
-            el.classList.add('flex');
-        };
-
-        window.closeModal = function(id) {
-            const el = document.getElementById(id);
-            el.classList.add('hidden');
-            el.classList.remove('flex');
-        };
-
-        // 토스트 알림 유틸
-        function showToast(message, type = 'success') {
-            const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            const bgClass = type === 'error' ? 'bg-rose-600 text-white' : 'bg-choco text-cream';
-            
-            toast.className = `${bgClass} px-4 py-3 rounded-2xl shadow-lg text-xs sm:text-sm font-medium text-center transition-all duration-300 transform translate-y-2 opacity-0`;
-            toast.innerText = message;
-            
-            container.appendChild(toast);
-            requestAnimationFrame(() => {
-                toast.classList.remove('translate-y-2', 'opacity-0');
-            });
-
-            setTimeout(() => {
-                toast.classList.add('opacity-0', 'translate-y-2');
-                setTimeout(() => toast.remove(), 300);
-            }, 2800);
-        }
-
-        function escapeHtml(str) {
-            if (!str) return '';
-            return str.replace(/[&<>"']/g, function(m) {
-                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m];
-            });
-        }
-
-        // ==========================================
-        // 8. 앱 시작
-        // ==========================================
-        window.addEventListener('DOMContentLoaded', () => {
-            renderQuickChips();
-            renderWeekHeader();
-            weekData = createDefaultWeekData(currentWeekMonday);
-            renderCalendar();
-            initFirebaseAndSync();
-        });
-    </script>
-</body>
-</html>
+      </div>
+    </header>
+
+    <!-- 주간 달력 그리드 (월~금 상단 5열 / 토~일 하단 2열) -->
+    <main class="space-y-4">
+      <!-- 평일 (월~금) -->
+      <div id="weekdays-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4"></div>
+      <!-- 주말 (토
