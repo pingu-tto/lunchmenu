@@ -165,7 +165,7 @@
                     <!-- 방 코드(공유룸) 버튼 -->
                     <button onclick="openRoomModal()" class="flex items-center gap-1.5 bg-softLavender hover:bg-purple-200/80 text-purple-900 font-semibold text-xs sm:text-sm px-3.5 py-2.5 rounded-2xl border border-purple-200 transition-all active:scale-95 shadow-sm">
                         <span>🔑 급식방 코드:</span>
-                        <span id="current-room-badge" class="font-bold underline decoration-purple-400">hoguk-yeongsu-lunch</span>
+                        <span id="current-room-badge" class="font-bold underline decoration-purple-400">hoguk-yeongsu</span>
                     </button>
 
                     <!-- 랜덤 메뉴 뽑기 버튼 -->
@@ -263,7 +263,7 @@
             <div class="bg-softLavender/50 p-4 rounded-2xl border border-purple-200 mb-4">
                 <label class="block text-xs font-bold text-purple-900 mb-1.5">우리만의 방 코드 입력 (한글/영문/숫자 자유)</label>
                 <div class="flex gap-2">
-                    <input type="text" id="room-code-input" placeholder="예: hoguk-yeongsu-lunch" 
+                    <input type="text" id="room-code-input" placeholder="예: hoguk-yeongsu" 
                         class="flex-1 bg-white border border-purple-200 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-choco focus:outline-none focus:ring-2 focus:ring-purple-400">
                     <button onclick="applyRoomCode()" class="bg-purple-600 hover:bg-purple-700 text-white font-bold text-sm px-4 py-2.5 rounded-xl transition-colors whitespace-nowrap">
                         입장하기
@@ -271,7 +271,7 @@
                 </div>
             </div>
             <div class="flex items-center justify-between text-xs text-chocoLight bg-cream p-3 rounded-xl">
-                <span>현재 접속된 방: <strong id="modal-current-room" class="text-choco">hoguk-yeongsu-lunch</strong></span>
+                <span>현재 접속된 방: <strong id="modal-current-room" class="text-choco">hoguk-yeongsu</strong></span>
                 <button onclick="copyRoomLink()" class="text-purple-700 font-bold hover:underline">📋 방 코드 복사</button>
             </div>
         </div>
@@ -346,9 +346,18 @@
 
     <!-- Firebase SDK 및 앱 로직 -->
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        // 사용자 제공 Firebase 설정값
+        const firebaseConfig = {
+            apiKey: "AIzaSyC-_QWMSDxZ9xb7nlMxlbB5qsMd-4ctz6M",
+            authDomain: "lunch-menu-594f3.firebaseapp.com",
+            projectId: "lunch-menu-594f3",
+            storageBucket: "lunch-menu-594f3.firebasestorage.app",
+            messagingSenderId: "397877090570",
+            appId: "1:397877090570:web:97af09be36c548d2c702f3"
+        };
 
         // ==========================================
         // 1. 전역 상태 및 날짜 설정 (2026년 11월 23일 월요일 기준)
@@ -357,26 +366,28 @@
         BASE_TODAY.setHours(0, 0, 0, 0);
 
         let currentWeekMonday = getMonday(new Date(BASE_TODAY));
-        let currentRoomCode = 'hoguk-yeongsu-lunch'; // 기본 공유 방 코드
+        let currentRoomCode = 'hoguk-yeongsu'; // 기본 공유 방 코드
         let weekData = {}; // 현재 주차의 7일 데이터
         let boardTitle = '호국 & 영수 도시락 급식표 🍱';
         
         // Firebase 관련 변수
         let db = null;
-        let auth = null;
-        let currentUser = null;
         let unsubscribeSnapshot = null;
         let isFirebaseReady = false;
-        let inMemoryFallbackStore = {}; // 로컬/오프라인 백업 저장소
-
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'hoguk-yeongsu-lunch-app';
+        let inMemoryFallbackStore = {}; // 오프라인 백업 저장소
 
         // 담당자 옵션 순환 배열 (호국 / 영수 / 같이 / 외식·휴무)
         const OWNERS = [
-            { id: 'hoguk', label: '호국 🙋‍♂️', bg: 'bg-softMint', text: 'text-teal-900', border: 'border-teal-300' },
+            { id: 'hoguk', label: '호국 🙋‍♂️', bg: 'bg-softBlue', text: 'text-sky-900', border: 'border-sky-300' },
             { id: 'yeongsu', label: '영수 👩‍💼', bg: 'bg-softCoral', text: 'text-rose-900', border: 'border-rose-300' },
-            { id: 'together', label: '같이 👯‍♀️', bg: 'bg-softYellow', text: 'text-amber-900', border: 'border-amber-300' },
-            { id: 'out', label: '외식·휴무 🍽️', bg: 'bg-gray-100', text: 'text-gray-600', border: 'border-gray-300' }
+            { id: 'together', label: '같이 👯‍♀️', bg: 'bg-softMint', text: 'text-teal-900', border: 'border-teal-300' },
+            { id: 'out', label: '외식/휴무 🍽️', bg: 'bg-gray-100', text: 'text-gray-600', border: 'border-gray-300' }
+        ];
+
+        // 빠른 추천 반찬 칩 목록
+        const QUICK_CHIPS = [
+            '계란말이', '소시지야채볶음', '제육볶음', '참치마요주먹밥', 
+            '김치볶음밥', '유부초밥', '닭가슴살샐러드', '진미채볶음', '어묵볶음'
         ];
 
         // 빠른 추천 반찬 칩 목록
@@ -409,183 +420,128 @@
         const TAPE_COLORS = ['', 'mint', 'peach', '', 'mint', 'peach', 'blue'];
 
         // ==========================================
-        // 2. 날짜 계산 헬퍼 함수
+        // 4. Firebase 초기화 및 실시간 동기화
         // ==========================================
-        function getMonday(d) {
-            const date = new Date(d);
-            const day = date.getDay();
-            const diff = date.getDate() - day + (day === 0 ? -6 : 1);
-            date.setDate(diff);
-            date.setHours(0, 0, 0, 0);
-            return date;
-        }
-
-        function formatDateKey(date) {
-            const y = date.getFullYear();
-            const m = String(date.getMonth() + 1).padStart(2, '0');
-            const d = String(date.getDate()).padStart(2, '0');
-            return `${y}-${m}-${d}`;
-        }
-
-        function formatShortDate(date) {
-            const m = date.getMonth() + 1;
-            const d = date.getDate();
-            return `${m}/${d}`;
-        }
-
-        // 몇 월 몇 주차인지 계산 (목요일 기준 ISO 주차 또는 단순 월 기준 주차)
-        function getWeekLabel(mondayDate) {
-            const thursday = new Date(mondayDate);
-            thursday.setDate(mondayDate.getDate() + 3);
-            const year = thursday.getFullYear();
-            const month = thursday.getMonth() + 1;
-            
-            // 해당 월의 첫째 날
-            const firstDayOfMonth = new Date(year, thursday.getMonth(), 1);
-            const firstMonday = getMonday(firstDayOfMonth);
-            let weekNum = Math.round((mondayDate - firstMonday) / (7 * 24 * 60 * 60 * 1000)) + 1;
-            if (weekNum < 1) weekNum = 1;
-
-            const sundayDate = new Date(mondayDate);
-            sundayDate.setDate(mondayDate.getDate() + 6);
-
-            return `${year}년 ${month}월 ${weekNum}주차 (${formatShortDate(mondayDate)} ~ ${formatShortDate(sundayDate)})`;
-        }
-
-        // ==========================================
-        // 3. 기본 예시 식단 데이터 생성기
-        // ==========================================
-        function createDefaultWeekData(mondayDate) {
-            const data = {};
-            const baseMondayStr = formatDateKey(getMonday(BASE_TODAY));
-            const targetMondayStr = formatDateKey(mondayDate);
-            const isBaseWeek = (baseMondayStr === targetMondayStr);
-
-            const sampleTemplates = [
-                // 월요일 (11/23)
-                {
-                    owner: 'together',
-                    menus: [
-                        { id: 'm1', text: '흑미밥 & 매콤 제육볶음', done: true },
-                        { id: 'm2', text: '포슬포슬 계란말이', done: false },
-                        { id: 'm3', text: '상추쌈 & 쌈장', done: false }
-                    ],
-                    memo: '전자레인지 2분 돌리기! 쌈채소는 호국이 챙김 🥬'
-                },
-                // 화요일 (11/24)
-                {
-                    owner: 'yeongsu',
-                    menus: [
-                        { id: 't1', text: '참치마요 유부초밥 (6개)', done: false },
-                        { id: 't2', text: '미니 컵우동', done: false },
-                        { id: 't3', text: '방울토마토 & 샤인머스캣', done: false }
-                    ],
-                    memo: '영수가 유부초밥 싸오는 날! 텀블러에 뜨거운 물 챙기기'
-                },
-                // 수요일 (11/25)
-                {
-                    owner: 'hoguk',
-                    menus: [
-                        { id: 'w1', text: '닭가슴살 퀴노아 샐러드', done: false },
-                        { id: 'w2', text: '삶은 계란 2알 & 군고구마', done: false },
-                        { id: 'w3', text: '발사믹 드레싱', done: false }
-                    ],
-                    memo: '수요일은 가볍게 클린식단 데이 🥗 (수저 챙기기)'
-                },
-                // 목요일 (11/26)
-                {
-                    owner: 'together',
-                    menus: [
-                        { id: 'th1', text: '스팸 김치볶음밥 (반숙후라이)', done: false },
-                        { id: 'th2', text: '비엔나 소시지 야채볶음', done: false },
-                        { id: 'th3', text: '단무지 & 볶음김치', done: false }
-                    ],
-                    memo: '김치 국물 안 새게 락앤락 패킹 꼭 확인하기!'
-                },
-                // 금요일 (11/27)
-                {
-                    owner: 'out',
-                    menus: [
-                        { id: 'f1', text: '불금 기념 회사 앞 파스타 맛집 외식 🍝', done: false },
-                        { id: 'f2', text: '식후 아이스 아메리카노 수혈', done: false }
-                    ],
-                    memo: '금요일은 도시락통 설거지 해방의 날!! 🎉'
-                },
-                // 토요일 (11/28)
-                {
-                    owner: 'out',
-                    menus: [
-                        { id: 'sa1', text: '주말 꿀잠 & 브런치 휴식 🥐', done: false }
-                    ],
-                    memo: '다음 주 도시락 장보기 리스트 카톡으로 정하기'
-                },
-                // 일요일 (11/29)
-                {
-                    owner: 'together',
-                    menus: [
-                        { id: 'su1', text: '월요일 도시락 밑반찬 미리 소분하기', done: false }
-                    ],
-                    memo: '쌀 씻어서 예약 취사 맞춰두기 🍚'
-                }
-            ];
-
-            for (let i = 0; i < 7; i++) {
-                const d = new Date(mondayDate);
-                d.setDate(mondayDate.getDate() + i);
-                const dateKey = formatDateKey(d);
-
-                if (isBaseWeek) {
-                    // 2026년 11월 4주차에는 풍성한 예시 데이터 제공
-                    data[dateKey] = JSON.parse(JSON.stringify(sampleTemplates[i]));
-                } else {
-                    // 다른 주차는 깔끔한 기본 틀 제공
-                    data[dateKey] = {
-                        owner: i >= 5 ? 'out' : (i % 2 === 0 ? 'hoguk' : 'yeongsu'),
-                        menus: [],
-                        memo: ''
-                    };
-                }
-            }
-            return data;
-        }
-
-        // ==========================================
-        // 4. Firebase 초기화 및 실시간 동기화 (규칙 준수)
-        // ==========================================
-        async function initFirebaseAndSync() {
+        function initFirebaseAndSync() {
             const statusEl = document.getElementById('sync-status');
-            
+            statusEl.className = "inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200";
+            statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span> 연결 중...`;
+
             try {
-                if (typeof __firebase_config === 'undefined' || !__firebase_config) {
-                    throw new Error("Firebase config not provided");
-                }
-
-                const firebaseConfig = JSON.parse(__firebase_config);
                 const app = initializeApp(firebaseConfig);
-                auth = getAuth(app);
                 db = getFirestore(app);
-
-                // RULE 3: Auth Before Queries
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-
-                currentUser = auth.currentUser;
                 isFirebaseReady = true;
-
-                statusEl.className = "inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200";
-                statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500"></span> 실시간 동기화 ON`;
 
                 subscribeToCurrentWeek();
             } catch (error) {
-                console.warn("실시간 서버 연결 대신 로컬 세션 모드로 동작합니다:", error);
+                console.warn("Firebase 초기화 실패, 오프라인 모드로 동작합니다:", error);
                 isFirebaseReady = false;
-                statusEl.className = "inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200";
-                statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400"></span> 단독 세션 모드`;
-                
+                setOfflineStatus();
                 loadFromMemoryFallback();
+            }
+        }
+
+        function setOnlineStatus() {
+            const statusEl = document.getElementById('sync-status');
+            statusEl.className = "inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200";
+            statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500"></span> 실시간 동기화 연결됨 (방: ${escapeHtml(currentRoomCode)})`;
+        }
+
+        function setOfflineStatus() {
+            const statusEl = document.getElementById('sync-status');
+            statusEl.className = "inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200";
+            statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500"></span> 오프라인 모드`;
+        }
+
+        function getDocId() {
+            const weekKey = formatDateKey(currentWeekMonday);
+            const safeRoom = currentRoomCode.replace(/[^a-zA-Z0-9가-힣_-]/g, '') || 'hoguk-yeongsu';
+            return `${safeRoom}_${weekKey}`;
+        }
+
+        function subscribeToCurrentWeek() {
+            const docId = getDocId();
+            renderWeekHeader();
+
+            if (!isFirebaseReady || !db) {
+                loadFromMemoryFallback();
+                return;
+            }
+
+            if (unsubscribeSnapshot) {
+                unsubscribeSnapshot();
+            }
+
+            const docRef = doc(db, 'lunch_rooms', docId);
+
+            unsubscribeSnapshot = onSnapshot(docRef, async (docSnap) => {
+                setOnlineStatus();
+                if (docSnap.exists()) {
+                    const remoteData = docSnap.data();
+                    weekData = remoteData.days || createDefaultWeekData(currentWeekMonday);
+                    if (remoteData.title && document.activeElement !== document.getElementById('board-title')) {
+                        boardTitle = remoteData.title;
+                        document.getElementById('board-title').innerText = boardTitle;
+                    }
+                    
+                    // 현재 입력 중인 포커스 유지하며 부드럽게 렌더링
+                    const activeId = document.activeElement ? document.activeElement.id : null;
+                    const activeVal = document.activeElement && 'value' in document.activeElement ? document.activeElement.value : null;
+                    renderCalendar();
+                    if (activeId) {
+                        const el = document.getElementById(activeId);
+                        if (el) {
+                            el.focus();
+                            if (activeVal !== null && 'value' in el) el.value = activeVal;
+                        }
+                    }
+                } else {
+                    // 문서가 없으면 기본 예시 데이터 생성 후 저장
+                    weekData = createDefaultWeekData(currentWeekMonday);
+                    renderCalendar();
+                    await saveCurrentWeekData();
+                }
+            }, (error) => {
+                console.error("Firestore 구독 오류:", error);
+                setOfflineStatus();
+                showToast("Firestore 권한 또는 네트워크 오류로 오프라인 모드로 전환됩니다.", "error");
+                loadFromMemoryFallback();
+            });
+        }
+
+        function loadFromMemoryFallback() {
+            const docId = getDocId();
+            if (!inMemoryFallbackStore[docId]) {
+                inMemoryFallbackStore[docId] = {
+                    title: boardTitle,
+                    days: createDefaultWeekData(currentWeekMonday)
+                };
+            }
+            weekData = inMemoryFallbackStore[docId].days;
+            renderCalendar();
+        }
+
+        async function saveCurrentWeekData() {
+            const docId = getDocId();
+            inMemoryFallbackStore[docId] = {
+                title: boardTitle,
+                days: weekData
+            };
+
+            if (!isFirebaseReady || !db) return;
+
+            try {
+                const docRef = doc(db, 'lunch_rooms', docId);
+                await setDoc(docRef, {
+                    roomCode: currentRoomCode,
+                    weekStart: formatDateKey(currentWeekMonday),
+                    title: boardTitle,
+                    days: weekData,
+                    updatedAt: Date.now()
+                }, { merge: true });
+            } catch (error) {
+                console.error("저장 오류:", error);
+                setOfflineStatus();
             }
         }
 
