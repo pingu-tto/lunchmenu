@@ -147,4 +147,562 @@
     <main class="space-y-4">
       <!-- 평일 (월~금) -->
       <div id="weekdays-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4"></div>
-      <!-- 주말 (토
+      <!-- 주말 (토~일) -->
+      <div id="weekend-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+    </main>
+
+    <!-- 하단 안내 바 -->
+    <footer class="mt-6 bg-white/90 rounded-2xl border border-[#EFE6D8] px-5 py-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs text-[#8A796E]">
+      <div>
+        💡 <strong class="text-[#4A3B32]">사용 팁:</strong> 상단 [급식방 코드]를 호국 & 영수 두 분이 똑같이 맞추면 실시간으로 메뉴가 동기화돼요! &nbsp;|&nbsp; 담당자 뱃지를 누르면 <strong class="text-[#4A3B32]">호국 → 영수 → 같이 → 외식·휴무</strong> 순으로 바뀌어요.
+      </div>
+      <button onclick="resetCurrentWeekDemo()" class="text-[#D97706] hover:underline font-semibold self-start sm:self-auto shrink-0">
+        🔄 이번 주 예시 메뉴로 초기화
+      </button>
+    </footer>
+  </div>
+
+  <!-- 랜덤 메뉴 뽑기 모달 -->
+  <div id="roulette-modal" class="fixed inset-0 bg-black/40 backdrop-blur-xs hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-3xl border border-[#EFE6D8] max-w-md w-full p-6 soft-shadow animate-pop">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-title text-xl text-[#4A3B32]">🎲 오늘 도시락 뭐 싸지?</h3>
+        <button onclick="closeRouletteModal()" class="text-[#8A796E] hover:text-[#4A3B32] text-lg font-bold">✕</button>
+      </div>
+      <div class="bg-[#FFF8F1] border-2 border-dashed border-[#FDBA74] rounded-2xl p-6 text-center mb-4">
+        <div id="roulette-result" class="font-title text-2xl sm:text-3xl text-[#EA580C] mb-1">
+          제육볶음 & 상추쌈 🥬
+        </div>
+        <p class="text-xs text-[#8A796E]">버튼을 눌러 추천 조합을 돌려보세요!</p>
+      </div>
+      <div class="flex flex-col sm:flex-row gap-2 mb-3">
+        <button onclick="spinRoulette()" class="flex-1 py-2.5 rounded-xl bg-[#FDE68A] hover:bg-[#FCD34D] text-[#92400E] font-bold text-sm transition">
+          🎰 다시 돌리기
+        </button>
+        <select id="roulette-day-select" class="py-2.5 px-3 rounded-xl border border-[#EFE6D8] text-sm font-semibold text-[#4A3B32] bg-[#FAF5EE]">
+          <option value="0">월요일에 넣기</option>
+          <option value="1">화요일에 넣기</option>
+          <option value="2">수요일에 넣기</option>
+          <option value="3">목요일에 넣기</option>
+          <option value="4">금요일에 넣기</option>
+          <option value="5">토요일에 넣기</option>
+          <option value="6">일요일에 넣기</option>
+        </select>
+      </div>
+      <button onclick="applyRouletteMenu()" class="w-full py-3 rounded-xl bg-[#FF8A65] hover:bg-[#FF7043] text-white font-bold text-sm shadow-sm transition">
+        🍱 선택한 요일에 바로 추가하기
+      </button>
+    </div>
+  </div>
+
+  <!-- 토스트 알림 -->
+  <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#4A3B32] text-white text-xs sm:text-sm font-medium px-5 py-3 rounded-full shadow-lg opacity-0 pointer-events-none transition-opacity duration-300 z-50">
+    알림 메시지
+  </div>
+
+  <!-- Firebase & 앱 로직 -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+    import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyC-_QWMSDxZ9xb7nlMxlbB5qsMd-4ctz6M",
+      authDomain: "lunch-menu-594f3.firebaseapp.com",
+      projectId: "lunch-menu-594f3",
+      storageBucket: "lunch-menu-594f3.firebasestorage.app",
+      messagingSenderId: "397877090570",
+      appId: "1:397877090570:web:97af09be36c548d2c702f3"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // 기본 데이터 및 상수
+    const DAY_NAMES = ["월요일", "화요일", "수요일", "목요일", "금요일", "토요일", "일요일"];
+    const ROLES = [
+      { id: "hoguk", label: "호국 🙋‍♂️", bg: "bg-[#E0F2FE]", text: "text-[#0369A1]", border: "border-[#BAE6FD]" },
+      { id: "yeongsu", label: "영수 👩‍💼", bg: "bg-[#FCE7F3]", text: "text-[#BE185D]", border: "border-[#FBCFE8]" },
+      { id: "together", label: "같이 👯", bg: "bg-[#FEF3C7]", text: "text-[#B45309]", border: "border-[#FDE68A]" },
+      { id: "off", label: "외식·휴무 🍽️", bg: "bg-[#F3F4F6]", text: "text-[#4B5563]", border: "border-[#E5E7EB]" }
+    ];
+
+    const QUICK_CHIPS = [
+      "계란말이 🥚", "소시지야채볶음 🌭", "제육볶음 🥩", "김치볶음밥 🍳",
+      "참치마요주먹밥 🍙", "닭가슴살샐러드 🥗", "어묵볶음 🍢", "유부초밥 🍣", "방울토마토 🍅"
+    ];
+
+    const ROULETTE_MENUS = [
+      "제육볶음 & 상추쌈 🥬", "스팸계란말이 & 김치볶음 🍳", "참치마요 주먹밥 & 컵라면 🍙",
+      "닭가슴살 샐러드 & 삶은계란 🥗", "소불고기 & 콩나물무침 🥩", "유부초밥 & 미니우동 🍣",
+      "카레라이스 & 치킨너겟 🍛", "진미채볶음 & 소시지야채볶음 🌭", "훈제오리 부추무침 🦆",
+      "참치김치찌개 보온도시락 🍲"
+    ];
+
+    // 상태 변수
+    let roomCode = localStorage.getItem("lunch_room_code") || "hoguk-yeongsu";
+    let currentMonday = getMonday(new Date());
+    let boardTitle = "호국 & 영수 도시락 급식표";
+    let weeksData = {};
+    let unsubscribeSnapshot = null;
+    let isRemoteUpdating = false;
+
+    // 날짜 유틸리티
+    function getMonday(d) {
+      const date = new Date(d);
+      const day = date.getDay();
+      const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+      date.setDate(diff);
+      date.setHours(0, 0, 0, 0);
+      return date;
+    }
+
+    function formatDateKey(date) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, "0");
+      const d = String(date.getDate()).padStart(2, "0");
+      return `${y}-${m}-${d}`;
+    }
+
+    function getWeekKey(mondayDate) {
+      return formatDateKey(mondayDate);
+    }
+
+    function getWeekInfoText(mondayDate) {
+      const sunday = new Date(mondayDate);
+      sunday.setDate(mondayDate.getDate() + 6);
+      const year = mondayDate.getFullYear();
+      const month = mondayDate.getMonth() + 1;
+      const weekOfMonth = Math.ceil((mondayDate.getDate() + new Date(year, mondayDate.getMonth(), 1).getDay()) / 7);
+      const startStr = `${month}/${mondayDate.getDate()}`;
+      const endStr = `${sunday.getMonth() + 1}/${sunday.getDate()}`;
+      return `${year}년 ${month}월 ${weekOfMonth}주차 (${startStr} ~ ${endStr})`;
+    }
+
+    function createDefaultWeekData() {
+      return [
+        {
+          role: "hoguk",
+          menus: [
+            { text: "흑미밥 & 제육볶음", done: false },
+            { text: "계란말이", done: false },
+            { text: "진미채볶음", done: false }
+          ],
+          memo: "호국: 상추랑 쌈장 챙기기!"
+        },
+        {
+          role: "yeongsu",
+          menus: [
+            { text: "참치마요 주먹밥 🍙", done: false },
+            { text: "소시지야채볶음", done: false },
+            { text: "방울토마토", done: false }
+          ],
+          memo: "영수: 물티슈 넉넉히 챙기기"
+        },
+        {
+          role: "together",
+          menus: [
+            { text: "유부초밥 도시락 🍣", done: false },
+            { text: "닭가슴살 샐러드", done: false }
+          ],
+          memo: "수요일은 가볍게! 드레싱 별도 포장"
+        },
+        {
+          role: "hoguk",
+          menus: [
+            { text: "김치볶음밥 & 반숙후라이 🍳", done: false },
+            { text: "어묵볶음", done: false }
+          ],
+          memo: "김가루 따로 챙겨가기"
+        },
+        {
+          role: "off",
+          menus: [
+            { text: "금요일은 맛집 외식 데이! 🍜", done: false }
+          ],
+          memo: "회사 근처 쌀국수 or 돈까스"
+        },
+        {
+          role: "off",
+          menus: [],
+          memo: "주말 푹 쉬기 🛌"
+        },
+        {
+          role: "together",
+          menus: [],
+          memo: "다음 주 도시락 장보기 & 밑반찬 준비 🛒"
+        }
+      ];
+    }
+
+    function ensureWeekData(weekKey) {
+      if (!weeksData[weekKey]) {
+        weeksData[weekKey] = createDefaultWeekData();
+      }
+      return weeksData[weekKey];
+    }
+
+    // Firestore 실시간 연결
+    function connectRoom(code) {
+      if (unsubscribeSnapshot) unsubscribeSnapshot();
+      document.getElementById("room-label").textContent = code;
+      setSyncBadge("connecting");
+
+      const roomRef = doc(db, "lunch_boards", code);
+      unsubscribeSnapshot = onSnapshot(roomRef, (snap) => {
+        isRemoteUpdating = true;
+        if (snap.exists()) {
+          const data = snap.data();
+          if (data.boardTitle) {
+            boardTitle = data.boardTitle;
+            const titleEl = document.getElementById("board-title");
+            if (document.activeElement !== titleEl) {
+              titleEl.textContent = boardTitle;
+            }
+          }
+          if (data.weeksData) {
+            weeksData = data.weeksData;
+          }
+        } else {
+          // 새 방이면 기본 데이터 생성 후 저장
+          const wk = getWeekKey(currentMonday);
+          ensureWeekData(wk);
+          saveToCloud();
+        }
+        renderCalendar();
+        setSyncBadge("connected");
+        isRemoteUpdating = false;
+      }, (error) => {
+        console.error("Firestore sync error:", error);
+        setSyncBadge("error");
+      });
+    }
+
+    async function saveToCloud() {
+      if (isRemoteUpdating) return;
+      try {
+        const roomRef = doc(db, "lunch_boards", roomCode);
+        await setDoc(roomRef, {
+          boardTitle,
+          weeksData,
+          updatedAt: Date.now()
+        }, { merge: true });
+      } catch (e) {
+        console.error("Save error:", e);
+        showToast("⚠️ 저장 중 오류가 발생했어요. 인터넷 연결을 확인해 주세요.");
+      }
+    }
+
+    function setSyncBadge(status) {
+      const badge = document.getElementById("sync-badge");
+      if (status === "connected") {
+        badge.className = "inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200";
+        badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500"></span> 실시간 동기화 연결됨`;
+      } else if (status === "error") {
+        badge.className = "inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200";
+        badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500"></span> 연결 오류 (규칙 확인)`;
+      } else {
+        badge.className = "inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200";
+        badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span> 연결 준비중...`;
+      }
+    }
+
+    // 렌더링
+    function renderQuickChips() {
+      const container = document.getElementById("quick-chips-container");
+      container.innerHTML = QUICK_CHIPS.map(chip => `
+        <button onclick="quickAddChip('${chip}')"
+          class="text-xs px-2.5 py-1 rounded-full bg-[#FFF7ED] hover:bg-[#FFEDD5] text-[#9A3412] border border-[#FED7AA] transition font-medium">
+          + ${chip}
+        </button>
+      `).join("");
+    }
+
+    function renderCalendar() {
+      const weekKey = getWeekKey(currentMonday);
+      const weekDays = ensureWeekData(weekKey);
+      document.getElementById("week-label").textContent = getWeekInfoText(currentMonday);
+
+      const todayStr = formatDateKey(new Date());
+      const weekdaysGrid = document.getElementById("weekdays-grid");
+      const weekendGrid = document.getElementById("weekend-grid");
+
+      weekdaysGrid.innerHTML = "";
+      weekendGrid.innerHTML = "";
+
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(currentMonday);
+        d.setDate(currentMonday.getDate() + i);
+        const dateStr = formatDateKey(d);
+        const isToday = dateStr === todayStr;
+        const dayData = weekDays[i];
+        const roleObj = ROLES.find(r => r.id === dayData.role) || ROLES[0];
+
+        const isWeekend = i >= 5;
+        const dayColor = i === 5 ? "text-[#2563EB]" : i === 6 ? "text-[#DC2626]" : "text-[#4A3B32]";
+
+        const menusHtml = dayData.menus.length === 0
+          ? `<div class="text-xs text-[#B8A99E] text-center py-5 font-hand text-base">아직 정해진 메뉴가 없어요 🍽️</div>`
+          : dayData.menus.map((m, mIdx) => `
+              <div class="group flex items-center justify-between gap-1.5 bg-[#FAF7F2] hover:bg-[#FFF3E6] px-2.5 py-1.5 rounded-xl border border-[#F0E6D8] transition">
+                <button onclick="toggleMenuDone(${i}, ${mIdx})" class="flex items-center gap-2 text-left flex-1 min-w-0">
+                  <span class="w-4 h-4 rounded-md border flex items-center justify-center text-[10px] shrink-0 ${m.done ? 'bg-[#FF8A65] border-[#FF8A65] text-white' : 'bg-white border-[#D6C7B8]'}">
+                    ${m.done ? '✓' : ''}
+                  </span>
+                  <span class="text-xs sm:text-sm font-medium truncate ${m.done ? 'menu-done' : 'text-[#4A3B32]'}">${escapeHtml(m.text)}</span>
+                </button>
+                <button onclick="deleteMenu(${i}, ${mIdx})" class="opacity-60 hover:opacity-100 text-[#B8A99E] hover:text-rose-500 text-xs px-1">
+                  ✕
+                </button>
+              </div>
+            `).join("");
+
+        const cardHtml = `
+          <div class="day-card bg-white rounded-3xl border border-[#EFE6D8] soft-shadow p-4 flex flex-col justify-between ${isToday ? 'today-ring' : ''}">
+            <div>
+              <!-- 요일 헤더 -->
+              <div class="flex items-center justify-between gap-2 pb-3 mb-3 border-b border-dashed border-[#EFE6D8]">
+                <div class="flex items-center gap-1.5">
+                  <span class="font-title text-lg ${dayColor}">${DAY_NAMES[i]}</span>
+                  <span class="text-xs font-semibold text-[#8A796E]">${d.getMonth() + 1}/${d.getDate()}</span>
+                  ${isToday ? '<span class="text-[10px] font-extrabold bg-[#FF8A65] text-white px-2 py-0.5 rounded-full">TODAY</span>' : ''}
+                </div>
+                <button onclick="cycleRole(${i})" title="클릭해서 담당자 변경"
+                  class="text-xs font-bold px-2.5 py-1 rounded-full border ${roleObj.bg} ${roleObj.text} ${roleObj.border} hover:brightness-95 transition shrink-0">
+                  ${roleObj.label}
+                </button>
+              </div>
+
+              <!-- 메뉴 리스트 -->
+              <div class="space-y-1.5 mb-3 min-h-[96px]">
+                ${menusHtml}
+              </div>
+            </div>
+
+            <!-- 메뉴 입력 & 한줄 메모 -->
+            <div class="space-y-2 pt-2 border-t border-[#F5EFE6]">
+              <form onsubmit="addMenu(event, ${i})" class="flex gap-1.5">
+                <input id="input-day-${i}" type="text" placeholder="메뉴 입력 후 엔터..."
+                  class="flex-1 min-w-0 text-xs bg-[#FAF7F2] focus:bg-white border border-[#E6DACB] focus:border-[#FF8A65] rounded-xl px-2.5 py-2 outline-none transition" />
+                <button type="submit"
+                  class="px-2.5 py-1.5 rounded-xl bg-[#FF8A65] hover:bg-[#FF7043] text-white text-xs font-bold shrink-0 transition">
+                  +
+                </button>
+              </form>
+
+              <div class="flex items-center gap-1.5 bg-[#FFFDF9] border border-[#EFE6D8] rounded-xl px-2.5 py-1.5">
+                <span class="text-xs">📝</span>
+                <input type="text" value="${escapeHtml(dayData.memo || '')}"
+                  onchange="updateMemo(${i}, this.value)"
+                  placeholder="준비물/한줄 메모..."
+                  class="w-full bg-transparent text-xs text-[#6D5A4F] placeholder-[#C4B5A7] outline-none" />
+              </div>
+            </div>
+          </div>
+        `;
+
+        if (isWeekend) {
+          weekendGrid.insertAdjacentHTML("beforeend", cardHtml);
+        } else {
+          weekdaysGrid.insertAdjacentHTML("beforeend", cardHtml);
+        }
+      }
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    // 사용자 인터랙션 함수들 (전역 등록)
+    window.cycleRole = function(dayIdx) {
+      const wk = getWeekKey(currentMonday);
+      const dayData = ensureWeekData(wk)[dayIdx];
+      const currIdx = ROLES.findIndex(r => r.id === dayData.role);
+      const nextIdx = (currIdx + 1) % ROLES.length;
+      dayData.role = ROLES[nextIdx].id;
+      renderCalendar();
+      saveToCloud();
+    };
+
+    window.addMenu = function(e, dayIdx) {
+      e.preventDefault();
+      const input = document.getElementById(`input-day-${dayIdx}`);
+      const val = input.value.trim();
+      if (!val) return;
+      const wk = getWeekKey(currentMonday);
+      ensureWeekData(wk)[dayIdx].menus.push({ text: val, done: false });
+      input.value = "";
+      renderCalendar();
+      saveToCloud();
+    };
+
+    window.toggleMenuDone = function(dayIdx, menuIdx) {
+      const wk = getWeekKey(currentMonday);
+      const item = ensureWeekData(wk)[dayIdx].menus[menuIdx];
+      if (item) {
+        item.done = !item.done;
+        renderCalendar();
+        saveToCloud();
+      }
+    };
+
+    window.deleteMenu = function(dayIdx, menuIdx) {
+      const wk = getWeekKey(currentMonday);
+      ensureWeekData(wk)[dayIdx].menus.splice(menuIdx, 1);
+      renderCalendar();
+      saveToCloud();
+    };
+
+    window.updateMemo = function(dayIdx, text) {
+      const wk = getWeekKey(currentMonday);
+      ensureWeekData(wk)[dayIdx].memo = text.trim();
+      saveToCloud();
+    };
+
+    window.quickAddChip = function(chipText) {
+      const dayStr = prompt(`"${chipText}" 메뉴를 어느 요일에 추가할까요?\n숫자로 입력해 주세요 (1:월, 2:화, 3:수, 4:목, 5:금, 6:토, 7:일)`, "1");
+      if (!dayStr) return;
+      const idx = parseInt(dayStr, 10) - 1;
+      if (idx >= 0 && idx <= 6) {
+        const wk = getWeekKey(currentMonday);
+        ensureWeekData(wk)[idx].menus.push({ text: chipText, done: false });
+        renderCalendar();
+        saveToCloud();
+        showToast(`${DAY_NAMES[idx]}에 "${chipText}" 추가 완료! 🍱`);
+      } else {
+        showToast("1부터 7 사이의 숫자를 입력해 주세요!");
+      }
+    };
+
+    window.moveWeek = function(delta) {
+      currentMonday.setDate(currentMonday.getDate() + delta * 7);
+      renderCalendar();
+    };
+
+    window.goTodayWeek = function() {
+      currentMonday = getMonday(new Date());
+      renderCalendar();
+    };
+
+    window.changeRoomCode = function() {
+      const next = prompt("호국 & 영수 두 분이 함께 쓸 급식방 코드를 입력하세요 (영문/숫자 추천):", roomCode);
+      if (next && next.trim()) {
+        roomCode = next.trim().toLowerCase().replace(/[^a-z0-9-_]/g, "");
+        localStorage.setItem("lunch_room_code", roomCode);
+        connectRoom(roomCode);
+        showToast(`급식방 [${roomCode}]에 연결했습니다! 🔑`);
+      }
+    };
+
+    window.resetCurrentWeekDemo = function() {
+      if (!confirm("이번 주 식단을 기본 예시 메뉴로 되돌릴까요?")) return;
+      const wk = getWeekKey(currentMonday);
+      weeksData[wk] = createDefaultWeekData();
+      renderCalendar();
+      saveToCloud();
+      showToast("예시 메뉴로 초기화되었습니다!");
+    };
+
+    window.copyKakaoText = function() {
+      const wk = getWeekKey(currentMonday);
+      const weekDays = ensureWeekData(wk);
+      let lines = [`🍱 [${boardTitle}]`, `📅 ${getWeekInfoText(currentMonday)}`, ``];
+
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(currentMonday);
+        d.setDate(currentMonday.getDate() + i);
+        const dayData = weekDays[i];
+        const roleObj = ROLES.find(r => r.id === dayData.role) || ROLES[0];
+        const menuStr = dayData.menus.length > 0
+          ? dayData.menus.map(m => m.text).join(", ")
+          : "미정";
+        lines.push(`▪ ${DAY_NAMES[i]}(${d.getMonth() + 1}/${d.getDate()}) [${roleObj.label}]: ${menuStr}`);
+        if (dayData.memo) {
+          lines.push(`   └ 📝 ${dayData.memo}`);
+        }
+      }
+
+      navigator.clipboard.writeText(lines.join("\n")).then(() => {
+        showToast("카톡 공유용 주간 식단표가 복사되었습니다! 💬");
+      });
+    };
+
+    window.saveAsImage = function() {
+      showToast("급식표 이미지를 생성 중입니다... 📸");
+      const target = document.getElementById("capture-area");
+      html2canvas(target, { scale: 2, backgroundColor: "#FDFBF7" }).then(canvas => {
+        const link = document.createElement("a");
+        link.download = `호국영수_도시락급식표_${getWeekKey(currentMonday)}.png`;
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+        showToast("이미지가 저장되었습니다! 🎉");
+      });
+    };
+
+    // 룰렛 모달
+    window.openRouletteModal = function() {
+      const modal = document.getElementById("roulette-modal");
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+      spinRoulette();
+    };
+
+    window.closeRouletteModal = function() {
+      const modal = document.getElementById("roulette-modal");
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+    };
+
+    window.spinRoulette = function() {
+      const el = document.getElementById("roulette-result");
+      let count = 0;
+      const timer = setInterval(() => {
+        const rand = ROULETTE_MENUS[Math.floor(Math.random() * ROULETTE_MENUS.length)];
+        el.textContent = rand;
+        count++;
+        if (count > 10) clearInterval(timer);
+      }, 50);
+    };
+
+    window.applyRouletteMenu = function() {
+      const menuText = document.getElementById("roulette-result").textContent.trim();
+      const dayIdx = parseInt(document.getElementById("roulette-day-select").value, 10);
+      const wk = getWeekKey(currentMonday);
+      ensureWeekData(wk)[dayIdx].menus.push({ text: menuText, done: false });
+      renderCalendar();
+      saveToCloud();
+      closeRouletteModal();
+      showToast(`${DAY_NAMES[dayIdx]}에 "${menuText}" 추가 완료! 🎲`);
+    };
+
+    function showToast(msg) {
+      const toast = document.getElementById("toast");
+      toast.textContent = msg;
+      toast.classList.remove("opacity-0");
+      toast.classList.add("opacity-100");
+      setTimeout(() => {
+        toast.classList.remove("opacity-100");
+        toast.classList.add("opacity-0");
+      }, 2600);
+    }
+
+    // 제목 수정 감지
+    document.getElementById("board-title").addEventListener("blur", (e) => {
+      const newTitle = e.target.textContent.trim();
+      if (newTitle && newTitle !== boardTitle) {
+        boardTitle = newTitle;
+        saveToCloud();
+        showToast("급식표 제목이 저장되었습니다! ✏️");
+      }
+    });
+
+    // 초기화 실행
+    renderQuickChips();
+    renderCalendar();
+    connectRoom(roomCode);
+  </script>
+</body>
+</html>
